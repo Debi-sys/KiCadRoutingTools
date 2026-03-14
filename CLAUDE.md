@@ -18,6 +18,7 @@ This builds the Rust module, copies the library to the correct location, and ver
 
 | Script | Purpose |
 |--------|---------|
+| `route_keyboard.py` | **One-click keyboard PCB auto-routing** |
 | `route.py` | Route single-ended nets via Rust A* |
 | `route_diff.py` | Route differential pairs (P/N) |
 | `route_disconnected_planes.py` | Connect split power plane regions |
@@ -27,6 +28,10 @@ This builds the Rust module, copies the library to the correct location, and ver
 
 Typical usage:
 ```bash
+# Keyboard PCB: one-click routing for mechanical keyboards
+python route_keyboard.py input.kicad_pcb output.kicad_pcb --layers 2
+
+# General routing
 python route.py input.kicad_pcb output.kicad_pcb --nets "Net-(U2A-*)"
 python route_diff.py input.kicad_pcb output.kicad_pcb --nets "*lvds*"
 python route_disconnected_planes.py input.kicad_pcb output.kicad_pcb
@@ -88,10 +93,25 @@ kicad_writer.py          # Generates KiCad s-expression for segments/vias
 output_writer.py         # Writes final .kicad_pcb file
 ```
 
-### Routing Pipeline (route.py / route_diff.py)
+### Keyboard-Specific Layer (route_keyboard.py)
+
+```
+keyboard/
+  ├── matrix_detection.py    # Auto-detect switches, diodes, row/col nets
+  ├── net_classifier.py      # Classify nets (rows, cols, USB, power, MCU signals)
+  ├── presets.py             # GridRouteConfig presets for 2-layer and 4-layer
+  ├── routing_strategy.py    # Multi-phase routing orchestrator
+  └── matrix_routing.py      # Net ordering (center-out for matrix routing)
+```
+
+Keyboard routing is a **specialized orchestration** that reuses the core A* router.
+It detects the switch matrix topology from PCB netlist, classifies nets, and routes
+in phases (columns → rows → power → MCU signals) with layer biases for clean traces.
+
+### Routing Pipeline (route.py / route_diff.py / route_keyboard.py)
 
 1. **Parse** PCB with `kicad_parser.py`
-2. **Identify nets** to route (glob patterns, unrouted filter)
+2. **Identify nets** to route (glob patterns, unrouted filter, or keyboard matrix detection)
 3. **Order nets** (MPS or inside-out ordering for better results)
 4. **Build obstacle map** (base + per-net incremental cache)
 5. **Route each net** via Rust A*; on failure, analyze blockers and rip-up/reroute
