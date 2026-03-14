@@ -111,6 +111,34 @@ Report to user:
 - Package type, pad count, and grid depth for each
 - Recommended fanout tool
 
+### Step 3b: Check for Keyboard Matrix (Special Case)
+
+If the board contains mechanical key switches with diodes, it may be a keyboard PCB:
+
+```python
+from keyboard import detect_keyboard_matrix
+
+matrix = detect_keyboard_matrix(pcb_data)
+if matrix:
+    print(f"✓ Detected {matrix.matrix_size[0]}x{matrix.matrix_size[1]} keyboard matrix")
+    print(f"  {len(matrix.switches)} switches, {len(matrix.diodes)} diodes")
+    if matrix.mcu_footprint:
+        print(f"  MCU: {matrix.mcu_footprint.reference} ({matrix.mcu_footprint.footprint_name})")
+
+    # For keyboards, use the specialized route_keyboard.py instead
+    print("\n>>> RECOMMENDED: Use /route-keyboard skill for one-click keyboard routing!")
+    return
+```
+
+**If a keyboard matrix is detected**, recommend using the `/route-keyboard` skill instead.
+This provides one-click end-to-end routing optimized for mechanical keyboards with:
+- Auto-detection of matrix topology
+- Net classification (rows, columns, USB, power, MCU signals)
+- Multi-phase routing pipeline
+- Layer-specific biases for clean traces
+
+Proceed with the standard routing plan only if the user declines keyboard routing.
+
 ## Step 4: Check for Differential Pairs and Power Nets
 
 Use `list_nets.py` to detect differential pairs and power/ground nets:
@@ -399,6 +427,22 @@ For parallel data/address buses with clustered endpoints:
 - Routes are attracted to neighbors, creating clean parallel traces
 
 ## Step 8: Handle Special Cases
+
+### Keyboard PCB
+
+If a keyboard matrix is detected (mechanical switches + diodes in row/column topology):
+- **Recommended**: Use `/route-keyboard` skill for automatic one-click routing
+- **Advantages**:
+  - Auto-detects row/column nets from topology (no manual classification needed)
+  - Optimized routing parameters for 2-layer and 4-layer keyboards
+  - Multi-phase routing: columns → rows → power → MCU signals
+  - Layer-specific biases (columns on F.Cu, rows on B.Cu for 2-layer)
+  - Center-out net ordering for optimal results
+
+Example:
+```bash
+python route_keyboard.py board.kicad_pcb board_routed.kicad_pcb --layers 2 --verbose
+```
 
 ### 2-Layer Board with Dense Components
 
