@@ -77,6 +77,8 @@ def get_net_names_for_ids(pcb_data: PCBData, net_ids: List[int]) -> List[str]:
     """Convert net IDs to net names for use with batch_route()."""
     names = []
     for net_id in net_ids:
-        if net_id in pcb_data.nets and pcb_data.nets[net_id].name:
-            names.append(pcb_data.nets[net_id].name)
+        if pcb_data.nets and net_id in pcb_data.nets:
+            net = pcb_data.nets[net_id]
+            if net and net.name:
+                names.append(net.name)
     return names
